@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz IA & RH</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root { --purple:#7c3aed; --pink:#ec4899; --cyan:#06b6d4; --bg:#0f0f1a; --card:#1a1a2e; }
+body { font-family:'Segoe UI',sans-serif; background:var(--bg); color:#fff; min-height:100vh; }
+
+nav { display:flex; justify-content:space-between; align-items:center; padding:14px 24px;
+  background:rgba(255,255,255,.05); backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(255,255,255,.1); position:sticky; top:0; z-index:100; }
+.logo { font-size:1.1rem; font-weight:800; background:linear-gradient(135deg,var(--purple),var(--pink));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.nav-btn { padding:8px 16px; border-radius:20px; border:none; cursor:pointer; font-size:.82rem; font-weight:600; transition:.2s; }
+.btn-p { background:linear-gradient(135deg,var(--purple),var(--pink)); color:#fff; margin-right:8px; }
+.btn-a { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
+.btn-a:hover { background:rgba(255,255,255,.2); }
+
+.screen { display:none; min-height:calc(100vh - 57px); padding:28px 16px; max-width:680px; margin:0 auto; }
+.screen.active { display:block; }
+
+/* HOME */
+.hero { text-align:center; padding:20px 0 10px; }
+.hero h1 { font-size:2.2rem; font-weight:800; background:linear-gradient(135deg,var(--purple),var(--pink),var(--cyan));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:8px; }
+.hero p { color:rgba(255,255,255,.55); margin-bottom:24px; }
+.qr-section { background:var(--card); border-radius:20px; padding:24px; display:inline-block; margin-bottom:28px;
+  border:1px solid rgba(255,255,255,.1); }
+.qr-section p { font-size:.8rem; color:rgba(255,255,255,.45); margin-top:10px; }
+.join-card { background:var(--card); border-radius:20px; padding:24px; border:1px solid rgba(255,255,255,.1); text-align:left; }
+.join-card label { font-size:.85rem; color:rgba(255,255,255,.55); display:block; margin-bottom:6px; }
+.join-card input { width:100%; padding:13px 18px; border-radius:12px; border:2px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05); color:#fff; font-size:1rem; outline:none; margin-bottom:18px; transition:.2s; }
+.join-card input:focus { border-color:var(--purple); }
+.avatar-label { font-size:.85rem; color:rgba(255,255,255,.55); margin-bottom:10px; }
+.avatar-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:8px; margin-bottom:20px; }
+.av-opt { font-size:1.6rem; width:44px; height:44px; border-radius:12px; border:2px solid transparent;
+  background:rgba(255,255,255,.06); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:.2s; user-select:none; }
+.av-opt:hover { background:rgba(255,255,255,.14); transform:scale(1.1); }
+.av-opt.selected { border-color:var(--purple); background:rgba(124,58,237,.25); transform:scale(1.1); }
+.btn-start { width:100%; padding:14px; border-radius:14px; border:none;
+  background:linear-gradient(135deg,var(--purple),var(--pink)); color:#fff;
+  font-size:1rem; font-weight:700; cursor:pointer; transition:.2s; margin-top:4px; }
+.btn-start:hover { opacity:.9; transform:translateY(-1px); }
+
+/* QUIZ */
+.progress-bar { height:6px; background:rgba(255,255,255,.1); border-radius:10px; margin-bottom:20px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--purple),var(--pink)); border-radius:10px; transition:width .4s; }
+.q-header { display:flex; justify-content:space-between; margin-bottom:8px; font-size:.85rem; color:rgba(255,255,255,.5); }
+.q-timer { font-weight:700; }
+.player-tag { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.07);
+  padding:8px 14px; border-radius:30px; margin-bottom:18px; width:fit-content; }
+.q-text { font-size:1.2rem; font-weight:700; margin-bottom:22px; line-height:1.5; }
+.options { display:grid; gap:10px; }
+.opt-btn { padding:15px 18px; border-radius:14px; border:2px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04); color:#fff; font-size:.93rem; cursor:pointer; text-align:left; transition:.2s; }
+.opt-btn:hover:not(:disabled) { border-color:var(--purple); background:rgba(124,58,237,.15); }
+.opt-btn.correct { border-color:#10b981; background:rgba(16,185,129,.18); }
+.opt-btn.wrong { border-color:#ef4444; background:rgba(239,68,68,.18); }
+.opt-btn:disabled { cursor:default; }
+
+/* RESULT */
+.result-card { background:var(--card); border-radius:24px; padding:32px; text-align:center; border:1px solid rgba(255,255,255,.1); }
+.av-big { font-size:4rem; margin-bottom:8px; }
+.score-ring { width:110px; height:110px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  margin:0 auto 18px; background:conic-gradient(var(--purple),var(--pink)); position:relative; }
+.score-ring::before { content:''; position:absolute; width:82px; height:82px; border-radius:50%; background:var(--card); }
+.score-num { position:relative; font-size:1.6rem; font-weight:800; }
+.badge { display:inline-block; padding:6px 16px; border-radius:20px; font-size:.82rem; font-weight:700; margin-bottom:16px; }
+.badge.gold { background:linear-gradient(135deg,#f59e0b,#fbbf24); color:#000; }
+.badge.silver { background:linear-gradient(135deg,#6b7280,#9ca3af); color:#fff; }
+.badge.bronze { background:linear-gradient(135deg,#92400e,#b45309); color:#fff; }
+.result-card h2 { font-size:1.4rem; margin-bottom:6px; }
+.result-card p { color:rgba(255,255,255,.55); margin-bottom:16px; }
+.ideas-box { background:rgba(124,58,237,.12); border:1px solid rgba(124,58,237,.3);
+  border-radius:14px; padding:16px 18px; margin:16px 0; text-align:left; }
+.ideas-title { font-size:.88rem; font-weight:700; color:var(--cyan); margin-bottom:10px; }
+.ideas-box ul { list-style:none; display:flex; flex-direction:column; gap:7px; }
+.ideas-box li { font-size:.83rem; color:rgba(255,255,255,.75); }
+
+/* ADMIN */
+.admin-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+.admin-header h2 { font-size:1.3rem; font-weight:800; }
+.live { display:flex; align-items:center; gap:6px; font-size:.82rem; color:#10b981; }
+.live-dot { width:8px; height:8px; border-radius:50%; background:#10b981; animation:pulse 1.4s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+.stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--card); border-radius:16px; padding:18px; text-align:center; border:1px solid rgba(255,255,255,.07); }
+.stat-num { font-size:1.9rem; font-weight:800; background:linear-gradient(135deg,var(--purple),var(--pink));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.stat-label { font-size:.75rem; color:rgba(255,255,255,.45); margin-top:4px; }
+.section-title { font-size:.95rem; font-weight:700; color:rgba(255,255,255,.7); margin-bottom:12px; }
+.q-stat { background:var(--card); border-radius:12px; padding:14px; margin-bottom:8px; border:1px solid rgba(255,255,255,.07); }
+.q-stat-top { display:flex; justify-content:space-between; margin-bottom:7px; font-size:.85rem; }
+.q-pct { font-weight:700; color:var(--cyan); }
+.bar { height:7px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:10px; background:linear-gradient(90deg,var(--purple),var(--cyan)); transition:width .6s; }
+.leaderboard { background:var(--card); border-radius:16px; padding:18px; border:1px solid rgba(255,255,255,.07); }
+.lb-row { display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+.lb-row:last-child { border:none; }
+.lb-rank { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.8rem; }
+.r1{background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#000;}
+.r2{background:linear-gradient(135deg,#6b7280,#9ca3af);color:#fff;}
+.r3{background:linear-gradient(135deg,#92400e,#b45309);color:#fff;}
+.rx{background:rgba(255,255,255,.1);color:#fff;}
+.lb-av { font-size:1.3rem; }
+.lb-name { flex:1; font-weight:600; font-size:.9rem; }
+.lb-score { font-weight:700; color:var(--purple); font-size:.9rem; }
+.lb-bar { width:70px; height:5px; background:rgba(255,255,255,.1); border-radius:10px; overflow:hidden; }
+.lb-bar-fill { height:100%; background:linear-gradient(90deg,var(--purple),var(--pink)); border-radius:10px; }
+.empty-state { text-align:center; padding:36px; color:rgba(255,255,255,.35); font-size:.9rem; }
+.admin-qr-box { background:var(--card); border-radius:16px; padding:18px; border:1px solid rgba(255,255,255,.07);
+  display:flex; align-items:center; gap:18px; margin-bottom:24px; }
+.admin-qr-info h3 { font-size:.95rem; font-weight:700; margin-bottom:6px; }
+.admin-qr-info p { font-size:.8rem; color:rgba(255,255,255,.45); line-height:1.5; }
+.url-pill { background:rgba(255,255,255,.08); border-radius:8px; padding:4px 10px;
+  font-size:.72rem; color:var(--cyan); word-break:break-all; margin-top:8px; display:inline-block; }
+
+/* LOCK */
+.lock-wrap { max-width:280px; margin:60px auto; text-align:center; }
+.lock-wrap .icon { font-size:3rem; margin-bottom:14px; }
+.lock-wrap h2 { margin-bottom:20px; }
+.lock-wrap input { width:100%; padding:13px 18px; border-radius:12px; border:2px solid rgba(255,255,255,.12);
+  background:var(--card); color:#fff; font-size:1rem; outline:none; margin-bottom:12px; transition:.2s; }
+.lock-wrap input:focus { border-color:var(--purple); }
+.hint { margin-top:10px; font-size:.75rem; color:rgba(255,255,255,.35); }
+
+/* LOCAL BANNER */
+.local-banner { background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.3);
+  border-radius:12px; padding:12px 16px; margin-bottom:20px; font-size:.82rem;
+  color:#fbbf24; text-align:center; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">⚡ Quiz IA & RH</div>
+  <div>
+    <button class="nav-btn btn-p" onclick="showScreen('home')">Participer</button>
+    <button class="nav-btn btn-a" onclick="showScreen('admin-lock')">Admin 🔐</button>
+  </div>
+</nav>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="hero">
+    <h1>Quiz IA & RH</h1>
+    <p>Testez vos connaissances sur l'IA dans les Ressources Humaines !</p>
+    <div id="qrWrapper" style="display:none">
+      <div class="qr-section">
+        <div id="qrcode"></div>
+        <p>📱 Scannez pour rejoindre depuis votre mobile</p>
+      </div>
+    </div>
+    <div id="localBanner" class="local-banner" style="display:none">
+      📂 Fichier ouvert en local — Pour activer le QR code, hébergez ce fichier (ex : GitHub Pages)<br>
+      ou partagez simplement le fichier <b>index.html</b> par email / clé USB.
+    </div>
+  </div>
+  <div class="join-card">
+    <label>Votre prénom</label>
+    <input type="text" id="playerName" placeholder="Ex: Sophie..." maxlength="20" />
+    <div class="avatar-label">Choisissez votre avatar 🎭</div>
+    <div class="avatar-grid" id="avatarGrid"></div>
+    <button class="btn-start" onclick="startQuiz()">🚀 Lancer le quiz !</button>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div id="screen-quiz" class="screen">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="q-header">
+    <span id="qCounter">Q 1/8</span>
+    <span class="q-timer" id="timer">⏱ 20s</span>
+  </div>
+  <div class="player-tag">
+    <span style="font-size:1.3rem" id="playerAv"></span>
+    <span style="font-size:.88rem;font-weight:600" id="playerTagName"></span>
+  </div>
+  <div class="q-text" id="qText"></div>
+  <div class="options" id="options"></div>
+</div>
+
+<!-- RESULT -->
+<div id="screen-result" class="screen">
+  <div class="result-card">
+    <div class="av-big" id="resultAv"></div>
+    <div class="score-ring"><span class="score-num" id="finalScore"></span></div>
+    <div id="badgeEl"></div>
+    <h2 id="resultTitle"></h2>
+    <p id="resultMsg"></p>
+    <div id="ideasEl"></div>
+    <button class="btn-start" onclick="showScreen('home')" style="max-width:220px;margin:8px auto 0;display:block;">🔄 Rejouer</button>
+  </div>
+</div>
+
+<!-- ADMIN LOCK -->
+<div id="screen-admin-lock" class="screen">
+  <div class="lock-wrap">
+    <div class="icon">🔐</div>
+    <h2>Accès Admin</h2>
+    <input type="password" id="adminPwd" placeholder="Mot de passe..." onkeydown="if(event.key==='Enter')checkAdmin()" />
+    <button class="btn-start" onclick="checkAdmin()">Entrer</button>
+    <p class="hint">Mot de passe : <b>admin123</b></p>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div id="screen-admin" class="screen">
+  <div class="admin-header">
+    <h2>📊 Tableau de bord</h2>
+    <div class="live"><span class="live-dot"></span>Live</div>
+  </div>
+  <div class="admin-qr-box">
+    <div id="adminQR"></div>
+    <div class="admin-qr-info">
+      <h3>📱 QR Code participants</h3>
+      <p>Projetez ce QR code pour que les participants rejoignent le quiz.</p>
+      <div class="url-pill" id="adminUrl"></div>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="statP">0</div><div class="stat-label">Participants</div></div>
+    <div class="stat-card"><div class="stat-num" id="statAvg">—</div><div class="stat-label">Moy. réussite</div></div>
+    <div class="stat-card"><div class="stat-num" id="statBest">—</div><div class="stat-label">Meilleur score</div></div>
+  </div>
+  <div class="section-title">📈 Réussite par question</div>
+  <div id="qStats"></div>
+  <div class="section-title" style="margin-top:22px;">🏆 Classement</div>
+  <div class="leaderboard" id="leaderboard"></div>
+</div>
+
+<script>
+const AVATARS = ['🦁','🐯','🦊','🐺','🐻','🐼','🐨','🦝','🐸','🦄','🐙','🦋','🐬','🦅','🦉','🤖','👾','🎭','🧙','🥷','🧑‍🚀','🧑‍🔬','🧑‍💻','🎩'];
+
+const QUESTIONS = [
+  { q:"Qu'est-ce que l'IA peut faire le plus efficacement dans le recrutement ?",
+    opts:["Passer les entretiens à la place du RH","Analyser et filtrer les CV automatiquement","Décider seule des embauches","Négocier les salaires"], ans:1 },
+  { q:"Quel outil d'IA évalue souvent les soft skills des candidats ?",
+    opts:["Un chatbot vocal","L'analyse NLP (traitement du langage)","Un algorithme de trading","Un logiciel comptable"], ans:1 },
+  { q:"L'IA peut-elle remplacer totalement le DRH ?",
+    opts:["Oui, plus objective","Non, elle complète l'humain","Oui, d'ici 2025","Seulement dans les grands groupes"], ans:1 },
+  { q:"Qu'est-ce qu'un ATS dans les RH ?",
+    opts:["Un type de contrat","Un logiciel de suivi des candidatures","Une méthode d'évaluation 360°","Un indicateur de bien-être"], ans:1 },
+  { q:"Quel est le risque majeur de l'IA en RH ?",
+    opts:["Recrutement trop rapide","Biais algorithmiques discriminatoires","Coût trop faible","Trop grande précision"], ans:1 },
+  { q:"À quoi sert un outil d'IA de type 'People Analytics' en RH ?",
+    opts:["Gérer les paies automatiquement","Analyser les données RH pour anticiper les risques et talents","Organiser les plannings de congés","Remplacer les entretiens annuels"], ans:1 },
+  { q:"Comment l'IA peut-elle aider à réduire le turnover dans une entreprise ?",
+    opts:["En augmentant les salaires automatiquement","En prédisant les risques de départ grâce aux données comportementales","En supprimant les entretiens de départ","En limitant les promotions"], ans:1 },
+  { q:"Dans la formation professionnelle, quel est le principal apport de l'IA ?",
+    opts:["Remplacer les formateurs humains","Personnaliser les parcours d'apprentissage selon le profil de chaque apprenant","Supprimer les certifications","Réduire la durée des formations à 1 heure"], ans:1 }
+];
+
+let participants = [];
+let currentQ=0, score=0, playerName='', selectedAv='🤖', timerInt=null, timeLeft=20;
+let adminQrGenerated=false;
+
+// Avatar grid
+const grid = document.getElementById('avatarGrid');
+AVATARS.forEach((av,idx) => {
+  const el = document.createElement('div');
+  el.className='av-opt'; el.textContent=av;
+  el.onclick=()=>{ document.querySelectorAll('.av-opt').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); selectedAv=av; };
+  if(idx===15) el.classList.add('selected');
+  grid.appendChild(el);
+});
+
+// Détection local vs hébergé
+window.onload = () => {
+  const url = window.location.href;
+  const isLocal = url.startsWith('file://') || url.includes('localhost') || url.includes('127.0.0.1');
+  if(isLocal){
+    document.getElementById('localBanner').style.display='block';
+    document.getElementById('adminUrl').textContent='📂 Fichier local — pas d\'URL partageable';
+  } else {
+    document.getElementById('qrWrapper').style.display='block';
+    document.getElementById('adminUrl').textContent=url;
+    new QRCode(document.getElementById('qrcode'),{
+      text:url, width:140, height:140,
+      colorDark:'#7c3aed', colorLight:'#1a1a2e',
+      correctLevel:QRCode.CorrectLevel.H
+    });
+  }
+};
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  if(id==='admin') renderAdmin();
+}
+
+function checkAdmin(){
+  if(document.getElementById('adminPwd').value==='admin123'){
+    showScreen('admin');
+    if(!adminQrGenerated){
+      const url=window.location.href;
+      const isLocal=url.startsWith('file://')||url.includes('localhost');
+      if(!isLocal){
+        new QRCode(document.getElementById('adminQR'),{
+          text:url,width:90,height:90,
+          colorDark:'#7c3aed',colorLight:'#1a1a2e',
+          correctLevel:QRCode.CorrectLevel.H
+        });
+      } else {
+        document.getElementById('adminQR').innerHTML='<div style="width:90px;height:90px;display:flex;align-items:center;justify-content:center;font-size:2rem;background:rgba(255,255,255,.05);border-radius:8px;">📂</div>';
+      }
+      adminQrGenerated=true;
+    }
+  } else {
+    const inp=document.getElementById('adminPwd');
+    inp.style.borderColor='#ef4444';
+    setTimeout(()=>inp.style.borderColor='',900);
+  }
+}
+
+function startQuiz(){
+  playerName=document.getElementById('playerName').value.trim();
+  if(!playerName){document.getElementById('playerName').focus();return;}
+  currentQ=0; score=0;
+  document.getElementById('playerAv').textContent=selectedAv;
+  document.getElementById('playerTagName').textContent=playerName;
+  showScreen('quiz');
+  loadQuestion();
+}
+
+function loadQuestion(){
+  if(currentQ>=QUESTIONS.length){endQuiz();return;}
+  clearInterval(timerInt); timeLeft=20;
+  const q=QUESTIONS[currentQ];
+  document.getElementById('progressFill').style.width=((currentQ/QUESTIONS.length)*100)+'%';
+  document.getElementById('qCounter').textContent=`Q ${currentQ+1}/${QUESTIONS.length}`;
+  document.getElementById('qText').textContent=q.q;
+  const opts=document.getElementById('options');
+  opts.innerHTML='';
+  q.opts.forEach((o,i)=>{
+    const b=document.createElement('button');
+    b.className='opt-btn';
+    b.innerHTML=`<b>${['A','B','C','D'][i]}</b>  ${o}`;
+    b.onclick=()=>selectAnswer(i);
+    opts.appendChild(b);
+  });
+  updateTimer();
+  timerInt=setInterval(()=>{timeLeft--;updateTimer();if(timeLeft<=0){clearInterval(timerInt);revealAnswer(-1);setTimeout(nextQ,1600);}},1000);
+}
+
+function updateTimer(){
+  const el=document.getElementById('timer');
+  el.textContent=`⏱ ${timeLeft}s`;
+  el.style.color=timeLeft<=5?'#ef4444':'#06b6d4';
+}
+
+function selectAnswer(i){clearInterval(timerInt);revealAnswer(i);setTimeout(nextQ,1500);}
+
+function revealAnswer(chosen){
+  const q=QUESTIONS[currentQ];
+  document.querySelectorAll('.opt-btn').forEach((b,i)=>{
+    b.disabled=true;
+    if(i===q.ans)b.classList.add('correct');
+    else if(i===chosen)b.classList.add('wrong');
+  });
+  if(chosen===q.ans)score++;
+}
+
+function nextQ(){currentQ++;loadQuestion();}
+
+function endQuiz(){
+  document.getElementById('progressFill').style.width='100%';
+  const pct=Math.round(score/QUESTIONS.length*100);
+  document.getElementById('resultAv').textContent=selectedAv;
+  document.getElementById('finalScore').textContent=`${score}/${QUESTIONS.length}`;
+  let badge,title,msg,ideas='';
+  if(pct===100){
+    badge='<div class="badge gold">🥇 Expert IA & RH — Niveau Master</div>';
+    title='Exceptionnel ! Vous êtes au top 🎓';
+    msg='Vous maîtrisez parfaitement l\'IA dans les RH. Vous êtes prêt·e à conduire la transformation digitale RH !';
+    ideas=`<div class="ideas-box"><div class="ideas-title">💡 Pour aller encore plus loin</div><ul>
+      <li>🚀 Devenez référent·e IA dans votre équipe RH</li>
+      <li>📚 Explorez des certifications : Google AI, Microsoft AI-900</li>
+      <li>🤝 Participez à des communautés HR Tech</li>
+      <li>🛠️ Testez des outils : Paradox, Eightfold, Workday AI</li>
+    </ul></div>`;
+  } else if(pct>=75){
+    badge='<div class="badge silver">🥈 Confirmé·e — Niveau Avancé</div>';
+    title='Très bon niveau ! 👏';
+    msg='Vous avez d\'excellentes bases. Quelques zones à consolider et vous serez expert·e !';
+    ideas=`<div class="ideas-box"><div class="ideas-title">💡 Pour progresser</div><ul>
+      <li>🎯 Approfondissez le People Analytics et la data RH</li>
+      <li>📖 Lisez : "IA & Futur du travail" — rapport France Travail 2024</li>
+      <li>🧪 Expérimentez un outil d'IA RH en mode démo gratuite</li>
+    </ul></div>`;
+  } else if(pct>=50){
+    badge='<div class="badge bronze">🥉 Intermédiaire — En progression</div>';
+    title='Bien joué, continuez ! 💪';
+    msg='Vous avez de bonnes intuitions. Un peu de pratique et vous franchirez le cap supérieur.';
+    ideas=`<div class="ideas-box"><div class="ideas-title">💡 Idées pour monter en compétences</div><ul>
+      <li>🎓 Suivez un MOOC "IA pour les RH" sur Coursera ou OpenClassrooms</li>
+      <li>📰 Abonnez-vous à une newsletter HR Tech (HR Rebels, Cadremploi…)</li>
+      <li>💬 Discutez avec votre DRH des outils IA déjà en place</li>
+    </ul></div>`;
+  } else {
+    badge='<div class="badge" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff">🌱 Débutant·e — À explorer</div>';
+    title='C\'est un début, ne lâchez rien ! 🌱';
+    msg='L\'IA en RH est un univers passionnant qui s\'apprend vite. Voici par où commencer :';
+    ideas=`<div class="ideas-box"><div class="ideas-title">💡 Par où commencer ?</div><ul>
+      <li>▶️ Regardez "L\'IA expliquée en 5 min" sur YouTube</li>
+      <li>🎮 Retentez ce quiz après une semaine de veille !</li>
+      <li>📱 Testez ChatGPT pour une tâche RH du quotidien</li>
+      <li>🗣️ Participez à un atelier ou webinaire RH & IA</li>
+    </ul></div>`;
+  }
+  document.getElementById('badgeEl').innerHTML=badge;
+  document.getElementById('resultTitle').textContent=title;
+  document.getElementById('resultMsg').textContent=msg;
+  document.getElementById('ideasEl').innerHTML=ideas;
+  participants.push({name:playerName,avatar:selectedAv,score,pct,time:Date.now()});
+  showScreen('result');
+}
+
+function renderAdmin(){
+  const p=participants;
+  document.getElementById('statP').textContent=p.length;
+  if(!p.length){
+    document.getElementById('statAvg').textContent='—';
+    document.getElementById('statBest').textContent='—';
+    document.getElementById('qStats').innerHTML='<div class="empty-state">⏳ En attente de participants…</div>';
+    document.getElementById('leaderboard').innerHTML='<div class="empty-state">Aucun participant pour l\'instant</div>';
+    return;
+  }
+  const avg=Math.round(p.reduce((a,x)=>a+x.pct,0)/p.length);
+  const best=Math.max(...p.map(x=>x.score));
+  document.getElementById('statAvg').textContent=avg+'%';
+  document.getElementById('statBest').textContent=best+'/'+QUESTIONS.length;
+  let html='';
+  QUESTIONS.forEach((q,i)=>{
+    const correct=p.filter(x=>x.score>i).length;
+    const pct2=Math.round(correct/p.length*100);
+    html+=`<div class="q-stat"><div class="q-stat-top"><span>Q${i+1}. ${q.q.substring(0,52)}…</span><span class="q-pct">${pct2}%</span></div><div class="bar"><div class="bar-fill" style="width:${pct2}%"></div></div></div>`;
+  });
+  document.getElementById('qStats').innerHTML=html;
+  const sorted=[...p].sort((a,b)=>b.score-a.score||a.time-b.time).slice(0,10);
+  const rc=['r1','r2','r3'];
+  document.getElementById('leaderboard').innerHTML=sorted.map((x,i)=>`
+    <div class="lb-row">
+      <div class="lb-rank ${rc[i]||'rx'}">${i+1}</div>
+      <div class="lb-av">${x.avatar}</div>
+      <div class="lb-name">${x.name}</div>
+      <div class="lb-score">${x.score}/${QUESTIONS.length}</div>
+      <div class="lb-bar"><div class="lb-bar-fill" style="width:${x.pct}%"></div></div>
+    </div>`).join('');
+}
+
+setInterval(()=>{if(document.getElementById('screen-admin').classList.contains('active'))renderAdmin();},3000);
+</script>
+</body>
+</html>
